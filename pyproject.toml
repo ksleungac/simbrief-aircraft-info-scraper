@@ -1,0 +1,13 @@
+[project]
+name = "simbrief-b777-fleet"
+version = "0.1.0"
+description = "Collect Boeing 777 airframe data per registration and stage it in a worksheet for manual paste into SimBrief's custom-airframe editor (tailored for FlightFactor 777 / X-Plane)."
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "playwright>=1.44",
+    "openpyxl>=3.1",
+]
+
+[tool.uv]
+package = false

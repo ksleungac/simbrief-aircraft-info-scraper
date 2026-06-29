@@ -1,0 +1,21 @@
+# --- SECRETS / SESSION: never publish ---
+# edi-gla persistent login (cookies + storage = live credentials)
+.edigla-profile/
+# exploratory dumps (HTML/screenshots of the logged-in site, other tails' plans)
+edigla_capture/
+edigla_out/
+
+# --- generated / derived (rebuilt from fleet.json via build_sheet.py) ---
+SimBrief_B777_Fleet.xlsx
+
+# --- python / uv ---
+__pycache__/
+*.py[cod]
+.venv/
+.python-version
+
+# --- editor / OS ---
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
