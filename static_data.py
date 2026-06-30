@@ -117,3 +117,83 @@ def airframe_name(icao: str, cabin: str, is_200er: bool = False) -> str:
     tag = "ER " if is_200er else ""
     return f"FF {icao} {tag}{cabin}".strip()
 
+# ---------------------------------------------------------------------------
+# 6) CABIN CONFIGS  - the weak field. NO free source maps a registration to its
+#    current cabin (sub-fleet configs drift per-tail, mid-retrofit), so:
+#      curated table (authoritative, marks 'latest')  ->  live seatmaps.com scrape.
+#    Resolver ALWAYS defaults to latest, lists every candidate, and flags the run
+#    so you confirm the actual tail. code uses F/C/W/Y (First/Business/PremEcon/Econ).
+#    Extend CABIN_CONFIGS as the fleet grows (same pattern as OPERATOR_ICAO).
+#    Numbers verified Jun 2026 (seatmaps.com / aerolopa / airline sites).
+# ---------------------------------------------------------------------------
+CABIN_CONFIGS = {
+    ("ANA", "B77W"): [
+        {"code": "F8C64W24Y116", "pax": 212, "label": "'The Room' new 64J", "latest": True},
+        {"code": "F8C68W24Y112", "pax": 212, "label": "original staggered 68J"},
+    ],
+    ("CPA", "B77W"): [
+        {"code": "C45W48Y268",   "pax": 361, "label": "77J Aria Suites, 3-class retrofit (no First)", "latest": True},
+        {"code": "F6C53W34Y201", "pax": 294, "label": "77A 4-class (with First)"},
+        {"code": "C40W32Y296",   "pax": 368, "label": "77K 3-class (Cirrus II, no First)"},
+    ],
+    ("CPA", "B772"): [
+        {"code": "C45Y291", "pax": 336, "label": "regional 2-class (Cirrus, no First)", "latest": True},
+    ],
+    ("KLM", "B772"): [
+        {"code": "C35W24Y229", "pax": 288, "label": "new 3-class (Premium Comfort)", "latest": True},
+        {"code": "C34Y286",    "pax": 320, "label": "old 2-class"},
+    ],
+}
+
+# operator ICAO -> seatmaps.com airline slug (live fallback for ops not curated above)
+SEATMAPS_SLUG = {
+    "CPA": "cx-cathay-pacific", "ANA": "nh-ana", "JAL": "jl-japan-airlines", "KLM": "kl-klm",
+    "UAL": "ua-united-airlines", "AAL": "aa-american-airlines", "DAL": "dl-delta-air-lines",
+    "BAW": "ba-british-airways", "UAE": "ek-emirates", "QTR": "qr-qatar-airways",
+    "SIA": "sq-singapore-airlines", "KAL": "ke-korean-air", "AFR": "af-air-france",
+    "EVA": "br-eva-air", "CAL": "ci-china-airlines", "ANZ": "nz-air-new-zealand",
+    "THY": "tk-turkish-airlines", "SWR": "lx-swiss", "ACA": "ac-air-canada",
+    "ETD": "ey-etihad-airways", "AIC": "ai-air-india", "CES": "mu-china-eastern",
+    "CSN": "cz-china-southern",
+}
+SEATMAPS_TYPE = {"B772": "boeing-777-200er", "B77W": "boeing-777-300er", "B77L": "boeing-777-200lr"}
+
+def cabin_candidates(icao, base):
+    """Curated cabin configs for (operator ICAO, base type). [] if none."""
+    return CABIN_CONFIGS.get((icao or "", base or ""), [])
+
+def pick_latest(configs):
+    """The config flagged latest, else the first."""
+    if not configs:
+        return None
+    for c in configs:
+        if c.get("latest"):
+            return c
+    return configs[0]
+
+# operator+type combos where LATEST is forward-valid for the WHOLE fleet (full
+# conversion or single product) -> auto-pick latest silently, NO confirm flag.
+# Combos NOT listed (with >1 config) still flag for per-tail confirmation,
+# e.g. ANA/B77W (holdout tails without 'The Room').
+CABIN_AUTO_LATEST = {
+    ("CPA", "B77W"),   # entire 777 fleet converting to 77J Aria by 2027
+    ("KLM", "B772"),   # Premium Comfort retrofit fleet-wide (done ~Apr 2026)
+}
+
+# ---------------------------------------------------------------------------
+# 7) B772 ENGINE by operator (the only base type with >1 engine option).
+#    Engine NAME is cosmetic; thrust spread is ~4% (immaterial under P00), so
+#    this is a convenience map to avoid the per-tail flag for known operators.
+#    Only high-confidence, single-engine-family fleets here; mixed fleets (e.g.
+#    BA: GE90 + Trent) are omitted on purpose so they still flag. Extend freely.
+# ---------------------------------------------------------------------------
+OPERATOR_ENGINE_B772 = {
+    "KLM": "GE90-94B",   # all KLM 777-200ER
+    "CPA": "Trent 877",  # Cathay 777-200 (RR Trent 800) -> sim Trent 892
+    "UAL": "PW4090",     # United 777-200/200ER (PW4000)
+    "ANA": "PW4090",     # ANA 777-200 (PW4000)
+    "JAL": "PW4090",     # JAL 777-200 (PW4000)
+    "AAL": "Trent 892",  # American 777-200ER (RR Trent 800)
+    "SIA": "Trent 884",  # Singapore 777-200ER (RR Trent 800) -> sim Trent 892
+}
+

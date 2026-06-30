@@ -19,12 +19,17 @@ uv run playwright install chromium   # one-time: fetch the browser binary
 ## One command
 
 ```bash
-uv run python collect.py <REG> [callsign] [aircraft_icao]
+uv run python collect.py <REG> [callsign] [aircraft_icao]   # single
+uv run python collect.py --batch <REG1> <REG2> ...          # many in one session
 ```
 
 Auto-detects operator/type, scrapes what it can, **upserts a row into `fleet.json`
 keyed by registration**, then rebuilds `SimBrief_B777_Fleet.xlsx`. Optional args
 override auto-detection, e.g. `uv run python collect.py JA784A ANA B77W`.
+
+Notes split into `FLAGS:` (action needed → Status `Check`) and `INFO:` (auto-resolved
+→ stays `Ready`). A known-operator tail comes out `Ready`/CLEAN — only OEW/Max Cargo left.
+`--batch` reuses one browser session and isolates failures (one bad tail can't kill the run).
 
 It is **hardened to run unattended**: every external step is wrapped; on failure it
 records a flag in the row's Notes and carries on — it never crashes. A partial row is
@@ -66,6 +71,8 @@ flags "edi-gla NOT logged in", re-run the command above and sign in again.
 | `build_sheet.py` | Renders `fleet.json` → `SimBrief_B777_Fleet.xlsx` (4 tabs). |
 | `edigla_extract.py` | Standalone edi-gla extractor (same logic lives inline in collect.py). |
 | `edigla_capture.py` | Page-dumper; run to (re)learn edi-gla's layout or to re-login. |
+| `rzjets_extract.py` | Standalone rzjets per-tail lookup (SELCAL/engine/cn/ln/delivery + rego history). |
+| `rzjets_capture.py` | rzjets probe / Cloudflare-clearance refresh (run + click the Turnstile once). |
 | `fleet.json` | **Source of truth** (list of airframe records). Edit, then `build_sheet.py`. |
 | `SimBrief_B777_Fleet.xlsx` | Output (git-ignored; regenerate from `fleet.json`). |
 
@@ -76,7 +83,11 @@ flags "edi-gla NOT logged in", re-run the command above and sign in again.
   Field-18 RMK, so the search filters remarks `contains REG/<reg>`. Exact-reg match first,
   then the newest matching plan. Modern-format plan → real 10a/10b/PBN; old-format → blank
   10a (SimBrief default). SELCAL is per-tail and is **never** borrowed from another tail.
-- **Cabin:** `flyings.net` — coverage is spotty; treated as the field you confirm.
+- **Cabin:** curated `CABIN_CONFIGS` table → live `seatmaps.com` fallback (operator+type configs;
+  default latest, list candidates, flag for confirm). flyings.net is dead/dropped.
+- **rzjets (opt-in `RZJETS=1`):** per-tail SELCAL/engine/cn/ln/delivery + registration history.
+  Cloudflare-gated → runs headful via `.rzjets-profile` (refresh clearance with `rzjets_capture.py`).
+  Fills SELCAL when edi-gla has no exact plan, and flags a *former* registration (airframe re-registered).
 - **Weights / thrust / units / name:** `static_data.py` (no web).
 
 ## Notes

@@ -1,12 +1,18 @@
 # --- SECRETS / SESSION: never publish ---
 # edi-gla persistent login (cookies + storage = live credentials)
 .edigla-profile/
+# rzjets persistent profile (holds the Cloudflare clearance cookie)
+.rzjets-profile/
 # exploratory dumps (HTML/screenshots of the logged-in site, other tails' plans)
 edigla_capture/
 edigla_out/
+rzjets_out/
 
 # --- generated / derived (rebuilt from fleet.json via build_sheet.py) ---
 SimBrief_B777_Fleet.xlsx
+
+# --- delivery archives ---
+*.zip
 
 # --- python / uv ---
 __pycache__/
