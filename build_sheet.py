@@ -41,6 +41,7 @@ cols = [
     ("Units",7,"me"), ("OEW",10,"you"), ("MZFW",10,"me"), ("MTOW",10,"me"),
     ("MLW",10,"me"), ("Max Fuel",10,"me"), ("Max Pax",9,"me"), ("Max Cargo",10,"you"),
     ("Fuel Factor",11,"me"), ("Cost Index",10,"me"), ("Source/Notes",42,"me"),
+    ("Review",20,"track"),   # machine signal: enum codes; blank = auto-complete (OEW/Cargo aside)
 ]
 owner_fill = {"input":C_INPUT,"track":C_TRACK,"me":C_ME,"you":C_YOU}
 ws.cell(1,1,"SimBrief B777 Fleet - staging worksheet").font = title_font
@@ -55,7 +56,8 @@ last = HDR
 for ri, rec in enumerate(FLEET, start=HDR+1):
     last = ri
     for ci,(name,width,owner) in enumerate(cols, start=1):
-        c = ws.cell(ri,ci, rec.get(name)); c.alignment=left; c.border=border
+        val = ", ".join(rec.get("review") or []) if name == "Review" else rec.get(name)
+        c = ws.cell(ri,ci, val); c.alignment=left; c.border=border
         if owner == "you":
             c.fill = YOU_CELL
 for r in range(last+1, HDR+60):           # blank staging rows
@@ -64,7 +66,7 @@ for r in range(last+1, HDR+60):           # blank staging rows
         if owner=="you": c.fill = YOU_CELL
 
 DataValidation
-for dv,colL in [(DataValidation(type="list",formula1='"To do,Filled,Ready,Pasted"',allow_blank=True),"B"),
+for dv,colL in [(DataValidation(type="list",formula1='"Auto,Review,Filled,Pasted"',allow_blank=True),"B"),
                 (DataValidation(type="list",formula1='"B772,B77L,B77W,B77F"',allow_blank=True),"D"),
                 (DataValidation(type="list",formula1='"KG,LB"',allow_blank=True),"P")]:
     ws.add_data_validation(dv); dv.add(f"{colL}{HDR+1}:{colL}{HDR+59}")

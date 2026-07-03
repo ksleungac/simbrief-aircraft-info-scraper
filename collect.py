@@ -186,7 +186,7 @@ def cabin(page, reg, icao, base, flags, infos):
     return None, None
 
 # ---------- source: edi-gla (SELCAL, equipment, PBN) ----------
-def edigla(page, reg, callsign, ac_icao, flags):
+def edigla(page, reg, callsign, ac_icao, flags, infos):
     import urllib.parse
     reg_nodash = reg.replace("-", "")
     def search(remarks):
@@ -229,7 +229,7 @@ def edigla(page, reg, callsign, ac_icao, flags):
             out["10a"], out["10b"], out["modern"] = eq10a, eq10b, True
         else:
             out["10b"] = eq10b
-            flags.append(f"edi-gla equip old-format ('{equip}') - SimBrief default for 10a")
+            infos.append(f"edi-gla equip old-format ('{equip}') - SimBrief default for 10a (acceptable)")
         rem = grab("Remarks")
         f18 = dict(re.findall(r"([A-Z]{2,5})/(.*?)(?=\s+[A-Z]{2,5}/|$)", rem, re.S))
         out["PBN"] = (f18.get("PBN") or "").strip()
@@ -278,6 +278,41 @@ def _deliv_year(dd):                       # "02/19/13" -> "2013"
     if not dd: return ""
     yy = dd[-2:]
     return ("20" if int(yy) < 50 else "19") + yy
+
+# Machine-actionable review signal: map each action-flag's prose to an enum code.
+# A full-auto pipeline routes on rec["review"] (empty = machine-complete, modulo
+# OEW/Max Cargo which are blank by design). Prose stays in Source/Notes as audit only.
+REVIEW_CODES = [
+    ("not logged in", "EDIGLA_LOGIN"),
+    ("borrowed from", "EQUIP_BORROWED"),
+    ("no sibling plan", "EDIGLA_NO_DATA"),
+    ("NO exact-reg plan", "EDIGLA_NO_PLAN"),
+    ("SELCAL not found", "SELCAL_MISSING"),
+    ("captured NAV/", "PBN_IS_NAV"),
+    ("engine family per-tail", "ENGINE_UNKNOWN"),
+    ("configs ->", "CABIN_CONFIRM"),
+    ("seatmaps has MULTIPLE", "CABIN_CONFIRM"),
+    ("cabin: not found", "CABIN_MISSING"),
+    ("cabin: no source", "CABIN_MISSING"),
+    ("hex not found", "HEX_MISSING"),
+    ("type not found", "TYPE_MISSING"),
+    ("operator not found", "OPERATOR_MISSING"),
+    ("not in ICAO map", "OPERATOR_UNKNOWN"),
+    ("operator unknown", "OPERATOR_UNKNOWN"),
+    ("airport-data unreachable", "AIRPORTDATA_DOWN"),
+    ("base type unresolved", "BASE_UNRESOLVED"),
+    ("FORMER rego", "FORMER_REGO"),
+    ("rzjets blocked", "RZJETS_BLOCKED"),
+    ("rzjets error", "RZJETS_ERROR"),
+]
+
+def classify(flags):
+    codes = []
+    for f in flags:
+        for sub, code in REVIEW_CODES:
+            if sub in f and code not in codes:
+                codes.append(code); break
+    return codes
 
 def collect_one(page, reg, cs_override=None, ac_override=None):
     """Collect ONE registration on an already-open page. Returns (rec, flags, infos).
@@ -334,7 +369,7 @@ def collect_one(page, reg, cs_override=None, ac_override=None):
     # edi-gla
     eg = {"SELCAL": "", "10a": "", "10b": "", "PBN": "", "fpl_id": None, "search": None}
     if icao and base:
-        eg = edigla(page, reg, icao, base, flags)
+        eg = edigla(page, reg, icao, base, flags, infos)
     rec["SELCAL"] = eg.get("SELCAL") or ""
     rec["Equip 10a"] = eg.get("10a") or "(SB default)"
     rec["Xpdr 10b"] = eg.get("10b") or "(SB default)"
@@ -356,12 +391,13 @@ def collect_one(page, reg, cs_override=None, ac_override=None):
             if rz.get("current") is False:
                 flags.append(f"rzjets: {reg} is a FORMER rego (now {rz.get('current_reg','?')}) - verify you want this tail")
 
-    rec["Status"] = "Ready" if not flags else "Check"
+    rec["review"] = classify(flags)                 # machine signal: [] = auto-complete
+    rec["Status"] = "Review" if rec["review"] else "Auto"
     note = ("airport-data(hex/type); cabin(curated/seatmaps); edi-gla fpl%s(%s); static wts/thrust(%s). "
             % (eg.get("fpl_id"), eg.get("search"), units))
     if flags: note += "FLAGS: " + " | ".join(flags) + " "
     if infos: note += "INFO: " + " | ".join(infos) + " "
-    rec["Source/Notes"] = note + "*OEW+Cargo pending"
+    rec["Source/Notes"] = note + "*OEW+Cargo by you (blank by design)"
     return rec, flags, infos
 
 def upsert(rec):
@@ -373,7 +409,15 @@ def upsert(rec):
     json.dump(fleet, open(FLEET, "w", encoding="utf-8"), indent=2, ensure_ascii=False)
 
 def parse_args(argv):
-    """-> (jobs, batch). Single: REG [callsign] [icao]. Batch: --batch REG REG ..."""
+    """-> (jobs, batch). Single: REG [callsign] [icao]. Batch: --batch REG REG ...
+    or --batch-file <path> (one reg per line; # comments and blanks ignored)."""
+    if argv and argv[0] in ("--batch-file", "-f"):
+        regs = []
+        with open(argv[1], encoding="utf-8") as fh:
+            for line in fh:
+                line = line.split("#")[0].strip()
+                if line: regs.append(line.upper())
+        return [(r, None, None) for r in regs], True
     if argv and argv[0] in ("--batch", "-b"):
         return [(r.upper(), None, None) for r in argv[1:]], True
     reg = argv[0].upper()
@@ -384,7 +428,8 @@ def parse_args(argv):
 def main():
     if len(sys.argv) < 2:
         print("usage: python collect.py <REG> [callsign] [aircraft_icao]\n"
-              "       python collect.py --batch <REG1> <REG2> ...   (one session, walk away)")
+              "       python collect.py --batch <REG1> <REG2> ...      (one session, walk away)\n"
+              "       python collect.py --batch-file <regs.txt>        (one reg per line)")
         return
     jobs, batch = parse_args(sys.argv[1:])
     if not jobs:
@@ -402,10 +447,10 @@ def main():
             try:
                 rec, flags, infos = collect_one(page, reg, cs, ac)
             except Exception as e:   # never let one tail kill the batch
-                rec = {"Registration": reg.upper(), "Status": "Check",
+                rec = {"Registration": reg.upper(), "Status": "Review", "review": ["FATAL"],
                        "OEW": None, "Max Cargo": None, "Fuel Factor": "P00",
                        "Cost Index": "(SB default)",
-                       "Source/Notes": f"FATAL collect error: {e} *OEW+Cargo pending"}
+                       "Source/Notes": f"FATAL collect error: {e} *OEW+Cargo by you"}
                 flags, infos = [str(e)], []
             upsert(rec)              # write each row immediately (crash-safe)
             results.append((rec, flags, infos))
@@ -417,10 +462,11 @@ def main():
                        capture_output=True, text=True)
     print("\n" + (r.stdout.strip() or r.stderr.strip()))
     if batch or len(results) > 1:
-        print("\n=== batch summary ===")
+        auto = sum(1 for rec, _, _ in results if not rec.get("review"))
+        print(f"\n=== batch summary ({auto}/{len(results)} AUTO) ===")
         for rec, flags, infos in results:
-            tag = "CLEAN" if not flags else f"{len(flags)} flag(s)"
-            print(f"  {rec['Registration']:8} {str(rec.get('Status')):6} {tag}")
+            codes = rec.get("review") or []
+            print(f"  {rec['Registration']:8} {str(rec.get('Status')):7} {'AUTO' if not codes else ','.join(codes)}")
 
 if __name__ == "__main__":
     main()

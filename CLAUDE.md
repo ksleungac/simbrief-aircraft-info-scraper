@@ -12,6 +12,7 @@ into SimBrief's custom-airframe editor**. The tool collects; the user pastes.
 ```
 python collect.py <REG> [callsign] [aircraft_icao]      # single
 python collect.py --batch <REG1> <REG2> ...             # many, one browser session, walk away
+python collect.py --batch-file <regs.txt>               # one reg per line (# comments ok)
 ```
 Auto-detects operator/type, scrapes everything it can, **upserts a row into `fleet.json`
 keyed by registration**, then rebuilds `SimBrief_B777_Fleet.xlsx`. Optional args override
@@ -19,11 +20,16 @@ auto-detection (e.g. `python collect.py JA784A ANA B77W`).
 
 It is **hardened to run unattended**: every external step is wrapped; on failure it records
 a flag and carries on — it never crashes. In `--batch`, one bad tail can't kill the run
-(each row is written immediately; a fatal row gets a stub + flag). The sheet renders once at the end.
+(each row is written immediately; a fatal row gets a stub). The sheet renders once at the end;
+the run prints a manifest like `batch summary (7/8 AUTO)`.
 
-**Notes split into two classes:** `FLAGS:` = action needed → Status `Check`; `INFO:` =
-informational (auto-resolved) → Status stays `Ready`. A known-operator tail (engine + cabin
-auto-resolved, exact edi-gla plan) comes out **`Ready` / CLEAN** — only OEW/Max Cargo remain.
+**Full-auto signal (machine-actionable — the point of the project).** Each row gets a structured
+`review` field = list of enum codes (`HEX_MISSING`, `EQUIP_BORROWED`, `CABIN_CONFIRM`, `FORMER_REGO`, …).
+- **`review == []` → Status `Auto`** = machine-complete; a full-auto pipeline ships it untouched.
+- **`review` non-empty → Status `Review`** = a human should look; route on the codes, never on prose.
+- Prose (`FLAGS:`/`INFO:` in Source/Notes) is **audit only** — useless to automation, kept for humans.
+- **Acceptable defaults are INFO, not codes** (e.g. old-format `/S` → SB-default 10a; cabin auto-latest;
+  B772 engine via operator map) so they never trip review. Genuine gaps become codes.
 
 **Auto-resolution (removes most sit-in):**
 - **Cabin:** full-conversion fleets auto-pick latest silently (`CABIN_AUTO_LATEST`, e.g. CPA→Aria,
@@ -35,8 +41,11 @@ auto-resolved, exact edi-gla plan) comes out **`Ready` / CLEAN** — only OEW/Ma
 - **Input (you):** Registration — the key.
 - **Script (web/static):** Operator, Base Type, Variant, Airframe Name, Hex, SELCAL,
   Equip 10a/10b, PBN, Engine (real+sim), Thrust, Units, MZFW/MTOW/MLW/Max Fuel, Max Pax.
-- **You (manual, always):** `OEW`, `Max Cargo`. Plus the **cabin-layout choice** only for
-  fleets with holdout configs (e.g. ANA 'The Room'); full-conversion fleets auto-resolve.
+- **You (manual, always):** `OEW`, `Max Cargo`. **These are NOT web-sourceable and never will be —
+  OEW is an *output* of your in-sim cabin/cargo loadout (you configure the plane in SimBrief, OEW
+  falls out). They are blank BY DESIGN, never a data gap, never estimated, never a `review` code.
+  Do not ask the user about them.** Plus the **cabin-layout choice** only for fleets with holdout
+  configs (e.g. ANA 'The Room'); full-conversion fleets auto-resolve.
 
 ## Files
 - `collect.py` — the orchestrator (Playwright, one browser session for all sources).
