@@ -38,8 +38,15 @@ always written.
 Re-render the sheet without scraping:
 
 ```bash
-uv run python build_sheet.py
+uv run python build_sheet.py                 # rebuild the workbook
+uv run python build_sheet.py --card B-KQQ    # print one airframe's paste card to the terminal
+uv run python build_sheet.py --card          # print every card
 ```
+
+The workbook's **Paste Cards** tab lists each airframe's fields in the exact SimBrief-editor order —
+researched values, the fixed constants inlined (Fuel Factor P00, Cruise Level Offset 0, Service Ceiling
+FL431, CI/profiles/pax-bag = leave default), and OEW/Max Cargo marked blank-by-design — so the manual
+paste is a top-to-bottom checklist rather than decoding a wide spreadsheet row.
 
 ## edi-gla login (one-time, manual)
 
@@ -68,7 +75,7 @@ flags "edi-gla NOT logged in", re-run the command above and sign in again.
 | `collect.py` | The orchestrator (one Playwright session for all sources). |
 | `static_data.py` | Units rule, weight table, engine→thrust, name builder, perf defaults. |
 | `equip_codes.py` | ICAO Item 10a/10b/PBN code reference + decoder. |
-| `build_sheet.py` | Renders `fleet.json` → `SimBrief_B777_Fleet.xlsx` (4 tabs). |
+| `build_sheet.py` | Renders `fleet.json` → `SimBrief_B777_Fleet.xlsx` (5 tabs incl. Paste Cards); `--card` prints cards. |
 | `edigla_extract.py` | Standalone edi-gla extractor (same logic lives inline in collect.py). |
 | `edigla_capture.py` | Page-dumper; run to (re)learn edi-gla's layout or to re-login. |
 | `rzjets_extract.py` | Standalone rzjets per-tail lookup (SELCAL/engine/cn/ln/delivery + rego history). |

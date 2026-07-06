@@ -12,6 +12,62 @@ OUT  = os.path.join(HERE, "SimBrief_B777_Fleet.xlsx")
 with open(os.path.join(HERE, "fleet.json"), encoding="utf-8") as f:
     FLEET = json.load(f)
 
+# ---------------------------------------------------------------------------
+# Paste cards: one airframe's fields in the exact SimBrief editor order, so the
+# manual paste is a top-to-bottom checklist instead of decoding a wide row.
+# Rendered as the "Paste Cards" tab, and printable via `--card [REG ...]`.
+# ---------------------------------------------------------------------------
+def _cardval(rec, key):
+    v = rec.get(key)
+    if v is None or v == "":  return "(blank)"
+    if v == "(SB default)":   return "leave default"
+    return str(v)
+
+# (display label, fleet.json key) in the order the SimBrief airframe editor lists them
+CARD_RESEARCHED = [
+    ("Base Type","Base Type"), ("Registration","Registration"), ("Name","Airframe Name"),
+    ("SELCAL","SELCAL"), ("Mode-S / Hex","Hex"), ("Equipment (10a)","Equip 10a"),
+    ("Transponder (10b)","Xpdr 10b"), ("PBN","PBN"), ("Units","Units"),
+    ("Max Passengers","Max Pax"), ("MZFW","MZFW"), ("MTOW","MTOW"), ("MLW","MLW"),
+    ("Max Fuel","Max Fuel"), ("Thrust (flat rating)","Thrust lbf"),
+]
+# fixed on every airframe (literals); Fuel Factor / Cost Index still read from the row
+CARD_FIXED_LITERAL = [
+    ("Cruise Level Offset","0"), ("Service Ceiling","FL431"),
+    ("Climb/Cruise/Descent","leave default"), ("Pax / Bag weight","leave default"),
+]
+CARD_YOU = [("OEW","OEW"), ("Max Cargo","Max Cargo")]
+
+def card_rows(rec):
+    """-> [(label, value)] with ('__sec__', title) separators, in editor order."""
+    rows = [(lbl, _cardval(rec, key)) for lbl, key in CARD_RESEARCHED]
+    rows.append(("__sec__", "fixed - same on every airframe"))
+    rows.append(("Fuel Factor", _cardval(rec, "Fuel Factor")))
+    rows.append(("Cost Index",  _cardval(rec, "Cost Index")))
+    rows += CARD_FIXED_LITERAL
+    rows.append(("__sec__", "you - from in-sim loadout"))
+    rows += [(lbl, _cardval(rec, key)) for lbl, key in CARD_YOU]
+    return rows
+
+def card_text(rec):
+    title = f"{rec.get('Airframe Name') or '?'}  {rec.get('Registration') or '?'}"
+    W = 54
+    out = ["", "--- " + title + " " + "-" * max(3, W - len(title) - 5)]
+    for lbl, val in card_rows(rec):
+        if lbl == "__sec__":
+            out.append("-- " + val + " " + "-" * max(2, W - len(val) - 4))
+        else:
+            out.append(f"{lbl} {'.' * max(2, 22 - len(lbl))} {val}")
+    return "\n".join(out + ["-" * W])
+
+if "--card" in sys.argv:                       # print card(s) to terminal and exit
+    i = sys.argv.index("--card")
+    want = [a.upper() for a in sys.argv[i+1:]] or [r.get("Registration") for r in FLEET]
+    for reg in want:
+        rec = next((r for r in FLEET if (r.get("Registration") or "").upper() == reg), None)
+        print(card_text(rec) if rec else f"no such reg in fleet.json: {reg}")
+    sys.exit(0)
+
 wb = openpyxl.Workbook()
 
 hdr_font   = Font(bold=True, color="FFFFFF", size=11)
@@ -150,5 +206,36 @@ ec.cell(r,1,"PBN note: specs are NOT nested by number. RNAV10/RNP10 is oceanic (
             "RNAV5 is continental (may use DME/DME). A tighter spec covers a looser one only within the same "
             "domain (RNP4 => RNP10; RNAV1 => RNAV2/RNAV5). File what's approved - don't infer the ladder.").font = note_font
 
+# ======================== Paste Cards ========================
+pc = wb.create_sheet("Paste Cards")
+pc.column_dimensions["A"].width = 24
+pc.column_dimensions["B"].width = 30
+pc.cell(1,1,"Paste Cards - type each row into SimBrief's airframe editor, top to bottom").font = title_font
+pc.cell(2,1,"Blue = airframe header. Gray = fixed constant (same every time). "
+            "Orange = you fill (from in-sim loadout).").font = note_font
+r = 4
+for rec in FLEET:
+    pc.merge_cells(start_row=r,start_column=1,end_row=r,end_column=2)
+    h = pc.cell(r,1, f"{rec.get('Airframe Name') or '?'}   {rec.get('Registration')}")
+    h.fill=C_ME; h.font=Font(bold=True,color="FFFFFF",size=11); h.alignment=left; h.border=border
+    pc.cell(r,2).border = border
+    r += 1
+    section = "air"
+    for lbl, val in card_rows(rec):
+        if lbl == "__sec__":
+            section = "fixed" if val.startswith("fixed") else "you"
+            pc.merge_cells(start_row=r,start_column=1,end_row=r,end_column=2)
+            s = pc.cell(r,1, val); s.alignment=left; s.border=border
+            s.fill = C_TRACK if section=="fixed" else C_YOU
+            s.font = Font(italic=True,color="FFFFFF",size=9)
+            pc.cell(r,2).border = border
+            r += 1; continue
+        lc = pc.cell(r,1,lbl); lc.alignment=left; lc.border=border; lc.font=Font(size=10,color="555555")
+        vc = pc.cell(r,2,val); vc.alignment=left; vc.border=border; vc.font=Font(size=10,bold=True)
+        if section == "you" or val == "(blank)":
+            vc.fill = YOU_CELL
+        r += 1
+    r += 1                                      # spacer between cards
+
 wb.save(OUT)
-print("WROTE", OUT, "| fleet rows:", len(FLEET))
+print("WROTE", OUT, "| fleet rows:", len(FLEET), "| tabs: Fleet/Reference/Field Map/Equipment Codes/Paste Cards")

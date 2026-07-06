@@ -51,13 +51,17 @@ the run prints a manifest like `batch summary (7/8 AUTO)`.
 - `collect.py` — the orchestrator (Playwright, one browser session for all sources).
 - `static_data.py` — units rule, weight table, engine→thrust, name builder, perf defaults.
 - `equip_codes.py` — ICAO 10a/10b/PBN code→meaning reference + decoder.
-- `build_sheet.py` — renders `fleet.json` → `SimBrief_B777_Fleet.xlsx` (4 tabs). Run alone to re-render.
+- `build_sheet.py` — renders `fleet.json` → `SimBrief_B777_Fleet.xlsx` (5 tabs). Run alone to re-render.
+  `python build_sheet.py --card [REG ...]` prints paste card(s) to the terminal (all rows if no REG).
 - `edigla_extract.py` — standalone edi-gla extractor (collect.py has the same logic inline).
 - `edigla_capture.py` — exploratory page-dumper; run this to **re-learn edi-gla's layout** if it changes, or to **re-login**.
 - `rzjets_extract.py` — standalone rzjets per-tail lookup (SELCAL/engine/cn/ln/delivery + rego history). Headful.
 - `rzjets_capture.py` — rzjets structure probe / **Cloudflare clearance refresh** (run + click the Turnstile once).
 - `fleet.json` — **source of truth** (list of airframe records). Edit here, then `build_sheet.py`.
-- `SimBrief_B777_Fleet.xlsx` — output. Tabs: Fleet / 777 Reference / Field Map / Equipment Codes.
+- `SimBrief_B777_Fleet.xlsx` — output. Tabs: Fleet / 777 Reference / Field Map / Equipment Codes / Paste Cards.
+  **Paste Cards** = per-airframe field list in exact SimBrief-editor order (researched fields + fixed
+  constants inlined [P00, offset 0, FL431, leave-defaults] + OEW/Cargo marked blank-by-design) so the
+  manual paste is a top-to-bottom checklist, not a wide-row decode.
 - `.edigla-profile/` — Playwright **persistent login** for edi-gla. Don't delete/share. Holds the session.
 - `.rzjets-profile/` — Playwright profile holding the **Cloudflare clearance cookie** for rzjets. Don't share.
 - `edigla_capture/`, `edigla_out/`, `rzjets_out/` — dumps for debugging.
