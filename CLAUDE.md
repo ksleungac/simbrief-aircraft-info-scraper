@@ -8,6 +8,12 @@ into SimBrief's custom-airframe editor**. The tool collects; the user pastes.
 - **Scope: Boeing 777 family only** (for now).
 - **Sim target: FlightFactor 777 (X-Plane)** — matters for the thrust field (below).
 
+## Hard rule: local only, never publish
+**Never publish anything externally** — no Claude Artifacts, no hosted pages, no third-party
+services, no share links. All output (sheets, reports, **visualizations**) stays **local**: write a
+file and open it directly, or serve on localhost. Data this project collects never leaves the
+machine. Render any chart to a local `.html`, never an Artifact.
+
 ## One command
 ```
 python collect.py <REG> [callsign] [aircraft_icao]      # single
@@ -65,6 +71,13 @@ the run prints a manifest like `batch summary (7/8 AUTO)`.
 - `.edigla-profile/` — Playwright **persistent login** for edi-gla. Don't delete/share. Holds the session.
 - `.rzjets-profile/` — Playwright profile holding the **Cloudflare clearance cookie** for rzjets. Don't share.
 - `edigla_capture/`, `edigla_out/`, `rzjets_out/` — dumps for debugging.
+- `ci_collect.py` — **Cost Index estimator, observation side.** `collect` polls airplanes.live for
+  airborne 777s → clean cruise+IAS samples (`ci_samples.jsonl`); `enrich` resolves callsign→route→
+  countries via hexdb.io (`route_cache.json`); `report [--haul]` prints operator × type × [tier] × FL
+  → IAS median/range/n as **sim CI-tuning targets** (match FL in the sim, tune FMC CI to hit the IAS).
+  Captures only knowns (IAS/FL/route); **no weight** (unknown even per route). Viz = **local html only**.
+- `docs/ci-estimator.md` — the CI estimator design note (model, error budget, sources, status).
+- `ci_samples.jsonl`, `route_cache.json` — generated data (git-ignored, local).
 
 ## Sources (and order of preference)
 - **Hex (Mode-S/ICAO24):** `airport-data.com/aircraft/{REG}.html` (also gives operator, type, c/n, year). Public.

@@ -1,0 +1,297 @@
+<style>
+  :root{
+    --plane:#f9f9f7; --surface:#fcfcfb; --ink:#0b0b0b; --ink2:#52514e; --muted:#898781;
+    --grid:#e1e0d9; --axis:#c3c2b7; --border:rgba(11,11,11,0.10);
+    --dom:#2a78d6; --reg:#1baf7a; --intl:#eb6834; --unk:#8a8884; --accent:#2a78d6;
+    --chip:#fff; --chip-off:#eeede8;
+  }
+  @media (prefers-color-scheme:dark){
+    :root{
+      --plane:#0d0d0d; --surface:#1a1a19; --ink:#fff; --ink2:#c3c2b7; --muted:#8f8d86;
+      --grid:#2c2c2a; --axis:#3a3a37; --border:rgba(255,255,255,0.10);
+      --dom:#3987e5; --reg:#199e70; --intl:#d95926; --unk:#8f8d86; --accent:#3987e5;
+      --chip:#242422; --chip-off:#161615;
+    }
+  }
+  :root[data-theme="light"]{
+    --plane:#f9f9f7; --surface:#fcfcfb; --ink:#0b0b0b; --ink2:#52514e; --muted:#898781;
+    --grid:#e1e0d9; --axis:#c3c2b7; --border:rgba(11,11,11,0.10);
+    --dom:#2a78d6; --reg:#1baf7a; --intl:#eb6834; --unk:#8a8884; --accent:#2a78d6;
+    --chip:#fff; --chip-off:#eeede8;
+  }
+  :root[data-theme="dark"]{
+    --plane:#0d0d0d; --surface:#1a1a19; --ink:#fff; --ink2:#c3c2b7; --muted:#8f8d86;
+    --grid:#2c2c2a; --axis:#3a3a37; --border:rgba(255,255,255,0.10);
+    --dom:#3987e5; --reg:#199e70; --intl:#d95926; --unk:#8f8d86; --accent:#3987e5;
+    --chip:#242422; --chip-off:#161615;
+  }
+
+  *{box-sizing:border-box}
+  body{margin:0}
+  .wrap{
+    max-width:940px; margin:0 auto; padding:34px 22px 60px;
+    background:var(--plane); color:var(--ink);
+    font-family:system-ui,-apple-system,"Segoe UI",sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  .mono{font-family:ui-monospace,"Cascadia Code","SF Mono",Consolas,monospace;
+    font-variant-numeric:tabular-nums}
+
+  .eyebrow{font:600 11px/1 ui-monospace,Consolas,monospace; letter-spacing:.16em;
+    text-transform:uppercase; color:var(--accent); margin:0 0 10px}
+  h1{font-size:clamp(23px,3.4vw,31px); line-height:1.12; margin:0 0 8px; font-weight:680;
+    letter-spacing:-.01em; text-wrap:balance}
+  .sub{margin:0; color:var(--ink2); font-size:15px; max-width:64ch; line-height:1.5}
+
+  .tiles{display:grid; grid-template-columns:repeat(auto-fit,minmax(120px,1fr)); gap:1px;
+    background:var(--border); border:1px solid var(--border); border-radius:12px;
+    overflow:hidden; margin:26px 0 22px}
+  .tile{background:var(--surface); padding:13px 15px}
+  .tile .k{font:600 10.5px/1 ui-monospace,Consolas,monospace; letter-spacing:.11em;
+    text-transform:uppercase; color:var(--muted)}
+  .tile .v{margin-top:7px; font-size:22px; font-weight:640; letter-spacing:-.01em}
+  .tile .v small{font-size:12px; font-weight:600; color:var(--ink2)}
+
+  .controls{display:flex; flex-wrap:wrap; gap:14px 20px; align-items:center; margin-bottom:8px}
+  .ctl{display:flex; align-items:center; gap:8px}
+  label.lbl{font:600 11px/1 ui-monospace,Consolas,monospace; letter-spacing:.1em;
+    text-transform:uppercase; color:var(--muted)}
+  select{font-family:ui-monospace,Consolas,monospace; font-size:13px; padding:6px 9px;
+    background:var(--surface); color:var(--ink); border:1px solid var(--border);
+    border-radius:8px; cursor:pointer}
+  .legend{display:flex; flex-wrap:wrap; gap:7px}
+  .chip{display:inline-flex; align-items:center; gap:7px; padding:5px 11px 5px 9px;
+    background:var(--chip); border:1px solid var(--border); border-radius:999px;
+    font:600 12px/1 system-ui,sans-serif; color:var(--ink); cursor:pointer; user-select:none;
+    transition:opacity .12s}
+  .chip[aria-pressed="false"]{background:var(--chip-off); color:var(--muted); opacity:.6}
+  .chip svg{overflow:visible}
+  .btn{margin-left:auto; font:600 12px/1 system-ui,sans-serif; padding:7px 13px;
+    background:var(--surface); color:var(--ink2); border:1px solid var(--border);
+    border-radius:8px; cursor:pointer}
+  .btn:focus-visible,select:focus-visible,.chip:focus-visible{outline:2px solid var(--accent);
+    outline-offset:2px}
+
+  figure{margin:14px 0 0; background:var(--surface); border:1px solid var(--border);
+    border-radius:14px; padding:14px 12px 8px}
+  .chartbox{position:relative; width:100%; overflow-x:auto}
+  svg.chart{display:block; width:100%; height:auto; min-width:520px}
+  .grid line{stroke:var(--grid); stroke-width:1}
+  .axis line{stroke:var(--axis); stroke-width:1}
+  .tick{fill:var(--muted); font:500 11px/1 ui-monospace,Consolas,monospace}
+  .axtitle{fill:var(--ink2); font:600 11px/1 ui-monospace,Consolas,monospace;
+    letter-spacing:.08em; text-transform:uppercase}
+  .trend{fill:none; stroke:var(--muted); stroke-width:1.6; stroke-dasharray:2 4; opacity:.85}
+  .mark{stroke:var(--surface); stroke-width:1.2; cursor:pointer}
+  .mark.dom{fill:var(--dom)} .mark.reg{fill:var(--reg)}
+  .mark.intl{fill:var(--intl)} .mark.unk{fill:var(--unk)}
+  .mark.hot{stroke:var(--ink); stroke-width:1.6}
+
+  .tip{position:absolute; pointer-events:none; z-index:5; opacity:0; transition:opacity .1s;
+    background:var(--ink); color:var(--surface); border-radius:8px; padding:8px 10px;
+    font:500 12px/1.35 system-ui,sans-serif; white-space:nowrap;
+    box-shadow:0 6px 22px rgba(0,0,0,.28); transform:translate(-50%,-118%)}
+  .tip b{font-weight:700}
+  .tip .t2{color:var(--muted); font-family:ui-monospace,Consolas,monospace; font-size:11px}
+
+  .note{margin:20px 0 0; padding:15px 17px; background:var(--surface);
+    border:1px solid var(--border); border-left:3px solid var(--accent); border-radius:10px;
+    font-size:13.5px; line-height:1.55; color:var(--ink2)}
+  .note b{color:var(--ink)}
+  .foot{margin-top:22px; font:500 11.5px/1.5 ui-monospace,Consolas,monospace; color:var(--muted)}
+
+  table.data{width:100%; border-collapse:collapse; margin-top:14px; font-size:12.5px;
+    display:none}
+  table.data.show{display:table}
+  table.data th,table.data td{text-align:left; padding:6px 10px; border-bottom:1px solid var(--border)}
+  table.data th{font:600 10.5px/1 ui-monospace,Consolas,monospace; letter-spacing:.08em;
+    text-transform:uppercase; color:var(--muted)}
+  table.data td.num{text-align:right; font-family:ui-monospace,Consolas,monospace;
+    font-variant-numeric:tabular-nums}
+  @media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+<div class="wrap">
+  <p class="eyebrow">SimBrief fleet builder · observation-side prototype</p>
+  <h1>777 cruise speed as a Cost&nbsp;Index signal</h1>
+  <p class="sub">Real-world Boeing 777 cruise IAS scraped live from ADS-B, one point per flight
+    per flight level. Lower IAS at a given FL means a more economical Cost Index. This is a
+    1-minute smoke-test sample — the shape is here; the numbers tighten with a longer run.</p>
+
+  <div class="tiles" id="tiles"></div>
+
+  <div class="controls">
+    <div class="ctl">
+      <label class="lbl" for="op">Operator</label>
+      <select id="op"></select>
+    </div>
+    <div class="legend" id="legend"></div>
+    <button class="btn" id="toggleTable" aria-pressed="false">Table view</button>
+  </div>
+
+  <figure>
+    <div class="chartbox">
+      <svg class="chart" id="svg" viewBox="0 0 820 470" role="img"
+           aria-label="Scatter of cruise IAS versus flight level, colored by haul tier"></svg>
+      <div class="tip" id="tip"></div>
+    </div>
+    <table class="data" id="table"></table>
+  </figure>
+
+  <p class="note"><b>How to read it.</b> The dashed line is the median IAS at each FL — it falls
+    as you climb, because cruise is flown at roughly constant Mach (the physics, confirmed). At any
+    single FL, the vertical spread across operators and haul tiers is the <b>quiet CI signal</b>:
+    real but narrow, which is why one flight only pins a CI band, not a point. Domestic legs tend to
+    sit low (fuel-minded, short); watch how an operator's dots shift between haul tiers.</p>
+
+  <p class="foot" id="foot"></p>
+</div>
+
+<script>
+const DATA = __DATA__;
+const TIERS = [
+  {k:"dom",  label:"Domestic",      shape:"circle"},
+  {k:"reg",  label:"Regional",      shape:"triangle"},
+  {k:"intl", label:"International",  shape:"diamond"},
+  {k:"?",    label:"Unknown route", shape:"cross", cls:"unk"}
+];
+const clsOf = t => t==="?" ? "unk" : t;
+const NS="http://www.w3.org/2000/svg";
+const el=(n,a={})=>{const e=document.createElementNS(NS,n);for(const k in a)e.setAttribute(k,a[k]);return e;};
+
+// ---- state
+let selOp="ALL";
+const on = {dom:true,reg:true,intl:true,"?":true};
+
+// ---- geometry
+const VB={w:820,h:470}, P={l:54,r:16,t:16,b:44};
+const X0=285,X1=415, Y0=240,Y1=335;
+const px = fl => P.l + (fl-X0)/(X1-X0)*(VB.w-P.l-P.r);
+const py = ias=> (VB.h-P.b) - (ias-Y0)/(Y1-Y0)*(VB.h-P.t-P.b);
+const jit = i => (((i*2654435761)%1000)/1000-0.5)*9;
+
+function shapePath(shape,x,y,s){
+  if(shape==="circle") return el("circle",{cx:x,cy:y,r:s*0.62});
+  if(shape==="triangle"){const h=s*0.95;return el("polygon",{points:`${x},${y-h*0.62} ${x-h*0.6},${y+h*0.5} ${x+h*0.6},${y+h*0.5}`});}
+  if(shape==="diamond"){const d=s*0.82;return el("polygon",{points:`${x},${y-d} ${x+d},${y} ${x},${y+d} ${x-d},${y}`});}
+  // cross
+  const g=el("g"); const a=s*0.55;
+  g.appendChild(el("line",{x1:x-a,y1:y-a,x2:x+a,y2:y+a}));
+  g.appendChild(el("line",{x1:x-a,y1:y+a,x2:x+a,y2:y-a}));
+  return g;
+}
+
+function visible(){
+  return DATA.filter(d => on[d.tier] && (selOp==="ALL"||d.op===selOp));
+}
+
+function median(a){a=a.slice().sort((x,y)=>x-y);const n=a.length;return n?(n%2?a[(n-1)/2]:(a[n/2-1]+a[n/2])/2):null;}
+
+function render(){
+  const svg=document.getElementById("svg"); svg.textContent="";
+  const rows=visible();
+
+  // grid + axes
+  const grid=el("g",{class:"grid"});
+  for(let ias=240;ias<=335;ias+=20){const y=py(ias);grid.appendChild(el("line",{x1:P.l,y1:y,x2:VB.w-P.r,y2:y}));}
+  svg.appendChild(grid);
+  const ax=el("g",{class:"axis"});
+  ax.appendChild(el("line",{x1:P.l,y1:VB.h-P.b,x2:VB.w-P.r,y2:VB.h-P.b}));
+  ax.appendChild(el("line",{x1:P.l,y1:P.t,x2:P.l,y2:VB.h-P.b}));
+  svg.appendChild(ax);
+  // y ticks
+  for(let ias=240;ias<=335;ias+=20){const y=py(ias);const t=el("text",{class:"tick",x:P.l-9,y:y+3.5,"text-anchor":"end"});t.textContent=ias;svg.appendChild(t);}
+  // x ticks
+  for(let fl=290;fl<=410;fl+=20){const x=px(fl);const t=el("text",{class:"tick",x:x,y:VB.h-P.b+18,"text-anchor":"middle"});t.textContent="FL"+fl;svg.appendChild(t);}
+  const xtl=el("text",{class:"axtitle",x:(P.l+VB.w-P.r)/2,y:VB.h-6,"text-anchor":"middle"});xtl.textContent="Flight level";svg.appendChild(xtl);
+  const ytl=el("text",{class:"axtitle",x:0,y:0,"text-anchor":"middle",transform:`translate(15,${(P.t+VB.h-P.b)/2}) rotate(-90)`});ytl.textContent="IAS (kt)";svg.appendChild(ytl);
+
+  // median-per-FL trend
+  const byfl={};
+  rows.forEach(d=>{(byfl[d.fl]=byfl[d.fl]||[]).push(d.ias);});
+  const fls=Object.keys(byfl).map(Number).sort((a,b)=>a-b);
+  if(fls.length>1){
+    const pts=fls.map(f=>`${px(f).toFixed(1)},${py(median(byfl[f])).toFixed(1)}`).join(" ");
+    svg.appendChild(el("polyline",{class:"trend",points:pts}));
+  }
+
+  // marks
+  const tip=document.getElementById("tip"), box=svg.parentElement;
+  rows.forEach((d,i)=>{
+    const T=TIERS.find(t=>t.k===d.tier);
+    const x=px(d.fl)+jit(i), y=py(d.ias);
+    const m=shapePath(T.shape,x,y,10);
+    m.setAttribute("class","mark "+clsOf(d.tier));
+    m.addEventListener("mouseenter",ev=>{
+      m.classList.add("hot");
+      tip.innerHTML=`<b>${d.op}</b> · ${d.t}<br><span class="t2">${T.label} · FL${d.fl} · ${d.ias} kt</span>`;
+      const r=box.getBoundingClientRect();
+      tip.style.left=(ev.clientX-r.left)+"px"; tip.style.top=(ev.clientY-r.top)+"px";
+      tip.style.opacity=1;
+    });
+    m.addEventListener("mousemove",ev=>{const r=box.getBoundingClientRect();tip.style.left=(ev.clientX-r.left)+"px";tip.style.top=(ev.clientY-r.top)+"px";});
+    m.addEventListener("mouseleave",()=>{m.classList.remove("hot");tip.style.opacity=0;});
+    svg.appendChild(m);
+  });
+
+  tiles(rows); tableView(rows);
+  document.getElementById("foot").textContent =
+    `Source: airplanes.live (live ADS-B) · route via hexdb.io · ${DATA.length} flight-points, ${new Set(DATA.map(d=>d.op)).size} operators · prototype sample`;
+}
+
+function tiles(rows){
+  const iis=rows.map(d=>d.ias);
+  const cnt={dom:0,reg:0,intl:0,"?":0}; rows.forEach(d=>cnt[d.tier]++);
+  const t=[
+    ["Flight-points", rows.length],
+    ["Operators", new Set(rows.map(d=>d.op)).size],
+    ["FL range", rows.length?`${Math.min(...rows.map(d=>d.fl))}–${Math.max(...rows.map(d=>d.fl))}`:"—"],
+    ["IAS range", iis.length?`${Math.min(...iis)}–${Math.max(...iis)} <small>kt</small>`:"—"],
+    ["Haul mix", `${cnt.dom}<small>d</small> ${cnt.reg}<small>r</small> ${cnt.intl}<small>i</small>`]
+  ];
+  document.getElementById("tiles").innerHTML =
+    t.map(([k,v])=>`<div class="tile"><div class="k">${k}</div><div class="v mono">${v}</div></div>`).join("");
+}
+
+function tableView(rows){
+  const tb=document.getElementById("table");
+  const r=rows.slice().sort((a,b)=>a.op.localeCompare(b.op)||a.fl-b.fl);
+  tb.innerHTML="<thead><tr><th>Op</th><th>Type</th><th>Tier</th><th class='num'>FL</th><th class='num'>IAS</th></tr></thead><tbody>"+
+    r.map(d=>`<tr><td>${d.op}</td><td>${d.t}</td><td>${TIERS.find(t=>t.k===d.tier).label}</td><td class="num">${d.fl}</td><td class="num">${d.ias}</td></tr>`).join("")+"</tbody>";
+}
+
+// ---- controls
+function buildControls(){
+  const ops=[...new Set(DATA.map(d=>d.op))].sort();
+  const sel=document.getElementById("op");
+  sel.innerHTML=`<option value="ALL">All (${ops.length})</option>`+ops.map(o=>`<option>${o}</option>`).join("");
+  sel.addEventListener("change",e=>{selOp=e.target.value;render();});
+
+  const lg=document.getElementById("legend");
+  lg.innerHTML="";
+  TIERS.forEach(T=>{
+    const c=document.createElement("button");
+    c.className="chip"; c.setAttribute("aria-pressed","true");
+    const sw=`<svg width="14" height="14" viewBox="-7 -7 14 14" aria-hidden="true">${swatch(T)}</svg>`;
+    c.innerHTML=sw+T.label;
+    c.addEventListener("click",()=>{on[T.k]=!on[T.k];c.setAttribute("aria-pressed",String(on[T.k]));render();});
+    lg.appendChild(c);
+  });
+
+  const btn=document.getElementById("toggleTable");
+  btn.addEventListener("click",()=>{
+    const t=document.getElementById("table"); const show=t.classList.toggle("show");
+    btn.setAttribute("aria-pressed",String(show)); btn.textContent=show?"Hide table":"Table view";
+  });
+}
+function swatch(T){
+  const col=`var(--${clsOf(T.k)})`;
+  if(T.shape==="circle") return `<circle r="4.5" fill="${col}"/>`;
+  if(T.shape==="triangle") return `<polygon points="0,-5 4.6,4 -4.6,4" fill="${col}"/>`;
+  if(T.shape==="diamond") return `<polygon points="0,-5 5,0 0,5 -5,0" fill="${col}"/>`;
+  return `<g stroke="${col}" stroke-width="1.8"><line x1="-4" y1="-4" x2="4" y2="4"/><line x1="-4" y1="4" x2="4" y2="-4"/></g>`;
+}
+
+buildControls();
+render();
+</script>

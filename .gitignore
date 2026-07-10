@@ -11,6 +11,11 @@ rzjets_out/
 # --- generated / derived (rebuilt from fleet.json via build_sheet.py) ---
 SimBrief_B777_Fleet.xlsx
 
+# --- CI estimator generated/local data + rendered viz (never publish) ---
+ci_samples.jsonl
+route_cache.json
+ci_viz.html
+
 # --- delivery archives ---
 *.zip
 
